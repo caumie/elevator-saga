@@ -2,7 +2,7 @@
     init: (elevators, floors) => {
 
         const call = () => {
-            const origin = { floor: undefined, direction: undefined, reserve: undefined };
+            const origin = { floor: undefined, called:false, direction: undefined, reserve: undefined };
             const data = [...Array(floors.length).keys()].map((floorNum) => {
                 const upStat = Object.assign({}, origin);
                 upStat.floor = floorNum;
