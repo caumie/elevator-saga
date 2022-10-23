@@ -6,40 +6,41 @@
                 const per = floors.length / elevators.length;
                 const stayFloorNum = Math.ceil(elevatorId * per);
                 return stayFloorNum;
-            }
+            },
+            plan: function (currentFloor, searchRange) {
+                const searchMinFloor = Math.max(0, currentFloor - searchRange);
+                const searchMaxFloor = Math.min(currentFloor + searchRange, floors.length);
+
+                const upCall = floors
+                    .slice(currentFloor, searchMaxFloor)
+                    .filter(e => e.buttonStates["up"])
+                const downCall = floors
+                    .slice(searchMinFloor, currentFloor)
+                    .filter(e => e.buttonStates["down"])
+
+                console.log(upCall, downCall)
+                if (upCall.length === 0 && downCall.length === 0) {
+                    return undefined;
+                }
+                const upCallFloor = Math.max(...upCall.map(f => f.level));
+                const downCallFloor = Math.min(...downCall.map(f => f.level));
+
+                console.log(upCallFloor, downCallFloor)
+                return upCall >= downCall ? upCallFloor : downCallFloor;
+
+            },
+            nearPlan: function (currentFloor) {
+                const searchRange = parseInt(floors.length / elevators.length / 2);
+                return this.plan(currentFloor, searchRange);
+            },
+            farPlan: function (currentFloor) {
+                const searchRange = floors.length;
+                return this.plan(currentFloor, searchRange);
+            },
+            isNeededStopFloor: function (elevatorId, floorNum, direction) {
+                return true;
+            },
         });
-        const _plan = function (currentFloor, searchRange) {
-            const searchMinFloor = Math.max(0, currentFloor - searchRange);
-            const searchMaxFloor = Math.min(currentFloor + searchRange, floors.length);
-
-            const upCall = floors
-                .slice(currentFloor, searchMaxFloor)
-                .filter(e => e.buttonStates["up"])
-            const downCall = floors
-                .slice(searchMinFloor, currentFloor)
-                .filter(e => e.buttonStates["down"])
-
-            if (upCall.length === 0 && downCall.length === 0) {
-                return undefined;
-            }
-            const upCallFloor = Math.max(...upCall.map(f => f.level));
-            const downCallFloor = Math.min(...downCall.map(f => f.level));
-
-            console.log(upCallFloor, downCallFloor)
-            return upCall >= downCall ? upCallFloor : downCallFloor;
-
-        };
-        const nearPlan = function (currentFloor) {
-            const searchRange = parseInt(floors.length / elevators.length / 2);
-            return _plan(currentFloor, searchRange);
-        };
-        const farPlan = function (currentFloor) {
-            const searchRange = floors.length;
-            return _plan(currentFloor, searchRange);
-        };
-        const isNeededStopFloor = function (elevatorId, floorNum, direction) {
-            return true;
-        };
 
         elevators.map((e, i) => {
 
@@ -84,10 +85,10 @@
 
                 const currFloor = e.currentFloor();
 
-                let planFloor = nearPlan(currFloor);
+                let planFloor = planner.nearPlan(currFloor);
                 console.log("near", planFloor);
                 if (planFloor === undefined) {
-                    planFloor = farPlan(currFloor);
+                    planFloor = planner.farPlan(currFloor);
                     console.log("far", planFloor);
                     if (planFloor === undefined) {
                         // 適切な計画がなければ標準位置へ移動
