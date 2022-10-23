@@ -1,22 +1,37 @@
 {
     init: (elevators, floors) => {
 
-        const stat = () => {
-
-            this.adfa = aaa
-        };
+        // const getFloorPriority = (targetFloorNum) => {
+        //     const f = floors[targetFloorNum];
+        //     console.log(targetFloorNum, f.waiting("up"), f.waiting("down"))
+        //     if (f.waiting("up") || f.waiting("down")) {
+        //         const priority = Math.abs(e.currentFloor() - targetFloorNum);
+        //         return priority;
+        //     } else {
+        //         return Infinity;
+        //     }
+        // const stat = () => {
+        //     // waiting search. both direction.
+        //     const floorNums = [...Array(floors.length).keys()];
+        //     const priorities = floorNums.map(getFloorPriority);
+        //     const highPriorityValue = Math.min(...priorities);
+        //     const highPriorityFloorNum = priorities.findIndex(v => v === highPriorityValue);
+        //     console.log(priorities, highPriorityValue, highPriorityFloorNum);
+        //     if (highPriorityFloorNum !== -1) {
+        //         goingFloorNum = highPriorityFloorNum
+        //     }
+        // };
 
         elevators.map((e, i) => {
 
             e.id = i;
             e.plannedDirection = undefined;
 
-            e.getNextFloorDirection = () => {
-                if (e.destinationQueue.length === 0) {
+            e.getNextFloorDirection = (nextFloorNum) => {
+                if (nextFloorNum === e.currentFloor()) {
                     return "none";
                 }
-                const nextFloorNum = e.destinationQueue[0];
-                return nextFloorNum >= e.currentFloor() ? "up" : "down";
+                return nextFloorNum > e.currentFloor() ? "up" : "down";
             };
 
             e.setIndicator = (direction) => {
@@ -45,41 +60,41 @@
             )();
 
             e.on("idle", () => {
+                console.log("idle");
 
                 // 周囲の状況から計画作成
                 // 適切な計画がなければ標準位置へ移動
+                e.goingUpIndicator(true);
+                e.goingDownIndicator(true);
 
                 {
-
-                    if (e.currentFloor() > goingFloorNum) {
-                        e.goingUpIndicator(false);
-                        e.goingDownIndicator(true);
-                    } else {
-                        e.goingUpIndicator(true);
-                        e.goingDownIndicator(false);
-                    }
-
-                    e.goToFloor(goingFloorNum);
-
+                    const direction = e.getNextFloorDirection(e.stayFloorNum);
+                    e.setIndicator(direction);
+                    e.goToFloor(e.stayFloorNum);
+                    
                 }
             });
             e.on("passing_floor", (floorNum, direction) => {
+                console.log("pass", floors[floorNum][direction].called, e.checkAvailability())
 
                 // そもそも止まる予定か
                 // 合致する方向の要求があるか
                 // 重量に空きがあるか
                 // よい場合は停止要求のキューの最初に追加
-                if (floorNum === e.destinationQueue[0]) { return; }
                 if (false === floors[floorNum][direction].called) { return; }
                 if (false === e.checkAvailability()) { return; }
-
-                e.destinationQueue.unshift(floorNum);
-                e.checkDestinationQueue();
+                
+                if (floorNum !== e.destinationQueue[0]) {
+                    console.log("push!", floorNum)
+                    e.destinationQueue.unshift(floorNum);
+                    e.checkDestinationQueue();
+                }
 
             });
             e.on("stopped_at_floor", (floorNum) => {
 
-                const direction = e.getNextFloorDirection();
+                const direction = e.getNextFloorDirection(floorNum);
+                console.log("stopped", direction, e.getPressedFloors());
                 if (direction === "none") { return };
 
                 // 次の階次第で進行方向表示を更新
@@ -90,17 +105,17 @@
 
             });
             e.on("floor_button_pressed", (floorNum) => {
+                console.log("press", e.getPressedFloors());
 
                 // 押されたボタン＋周囲の状況から、再計画、キュー入れ込む
                 const pressedFloors = e.getPressedFloors();
-                
+
                 const lowerFloors = pressedFloors.filter(fN => e.currentFloor() > fN);
                 const higherFloors = pressedFloors.filter(fN => e.currentFloor() < fN);
 
-                if (lowerFloors.length <= higherFloors){
-                    const sortedPressedFloors = [...pressedFloors].sort();
-                }else{
-                    const sortedPressedFloors = [...pressedFloors].sort().reverse();
+                let sortedPressedFloors= [...pressedFloors].sort();
+                if (lowerFloors.length > higherFloors.length) {
+                    sortedPressedFloors.reverse();
                 }
 
                 e.destinationQueue = sortedPressedFloors;
