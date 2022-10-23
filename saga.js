@@ -1,14 +1,14 @@
 {
     init: (elevators, floors) => {
 
-        const planner = new Object();
-        planner.stayPlan = (elevatorId) => {
+        // const planner = new Object();
+        const stayPlan = (elevatorId) => {
             const per = floors.length / elevators.length;
             const stayFloorNum = parseInt(elevatorId * per);
             console.log(par, stayFloorNum, elevatorId);
             return stayFloorNum;
         };
-        planner._plan = (currentFloor, searchRange) => {
+        const _plan = (currentFloor, searchRange) => {
             const searchMinFloor = Math.max(0, currentFloor - searchRange);
             const searchMaxFloor = Math.min(currentFloor + searchRange, floors.length);
 
@@ -29,15 +29,15 @@
             return upCall >= downCall ? upCallFloor : downCallFloor;
 
         };
-        planner.nearPlan = (currentFloor) => {
+        const nearPlan = (currentFloor) => {
             const searchRange = parseInt(floors.length / elevators.length / 2);
-            return planner._plan(currentFloor, searchRange);
+            return _plan(currentFloor, searchRange);
         };
-        planner.farPlan = (currentFloor) => {
+        const farPlan = (currentFloor) => {
             const searchRange = floors.length;
-            return planner._plan(currentFloor, searchRange);
+            return _plan(currentFloor, searchRange);
         };
-        planner.isNeededStopFloor = (elevatorId, floorNum, direction) => {
+        const isNeededStopFloor = (elevatorId, floorNum, direction) => {
             return true;
         };
 
@@ -82,15 +82,14 @@
 
                 const currFloor = e.currentFloor();
 
-                let planFloor;
-                planFloor = planner.nearPlan(currFloor);
+                let planFloor = nearPlan(currFloor);
                 console.log("near", planFloor);
                 if (planFloor === NaN) {
-                    planFloor = planner.farPlan(currFloor);
+                    planFloor = farPlan(currFloor);
                     console.log("far", planFloor);
-                    if (planFloor !== NaN) {
+                    if (planFloor === NaN) {
                         // 適切な計画がなければ標準位置へ移動
-                        planFloor = planner.stayPlan(e.id);
+                        planFloor = stayPlan(e.id);
                         console.log("stay", planFloor);
                     }
                 }
