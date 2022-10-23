@@ -2,7 +2,7 @@
     init: (elevators, floors) => {
 
         const call = () => {
-            const origin = { floor: undefined, called:false, direction: undefined, reserve: undefined };
+            const origin = { floor: undefined, called: false, direction: undefined, reserve: undefined };
             const data = [...Array(floors.length).keys()].map((floorNum) => {
                 const upStat = Object.assign({}, origin);
                 upStat.floor = floorNum;
@@ -43,7 +43,7 @@
 
             e.availabilityCheck = () => {
                 const perPersonFactor = 1 / e.maxPassengerCount();
-                return (perPersonFactor <= 1 - e.loadFactor())
+                return (e.loadFactor() + (perPersonFactor * 2) <= 1)
             };
 
             e.on("idle", () => {
@@ -77,7 +77,7 @@
                         e.goingDownIndicator(false);
                     }
 
-                    e.goToFloor(goingFloorNum); 
+                    e.goToFloor(goingFloorNum);
 
                 }
             });
