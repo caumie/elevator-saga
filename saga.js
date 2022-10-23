@@ -4,7 +4,7 @@
         const planner = new Object({
             stayPlan: function (elevatorId) {
                 const per = floors.length / elevators.length;
-                const stayFloorNum = parseInt(elevatorId * per);
+                const stayFloorNum = Math.ceil(elevatorId * per);
                 return stayFloorNum;
             }
         });
