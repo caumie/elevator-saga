@@ -1,14 +1,14 @@
 {
     init: (elevators, floors) => {
 
-        // const planner = new Object();
-        const stayPlan = (elevatorId) => {
-            const per = floors.length / elevators.length;
-            const stayFloorNum = parseInt(elevatorId * per);
-            console.log(par, stayFloorNum, elevatorId);
-            return stayFloorNum;
-        };
-        const _plan = (currentFloor, searchRange) => {
+        const planner = new Object({
+            stayPlan: function (elevatorId) {
+                const per = floors.length / elevators.length;
+                const stayFloorNum = parseInt(elevatorId * per);
+                return stayFloorNum;
+            }
+        });
+        const _plan = function (currentFloor, searchRange) {
             const searchMinFloor = Math.max(0, currentFloor - searchRange);
             const searchMaxFloor = Math.min(currentFloor + searchRange, floors.length);
 
@@ -20,24 +20,24 @@
                 .filter(e => e.buttonStates["down"])
 
             if (upCall.length === 0 && downCall.length === 0) {
-                return NaN;
+                return undefined;
             }
-            const upCallFloor = max(...upCall.map(f => f.level));
-            const downCallFloor = min(...downCall.map(f => f.level));
+            const upCallFloor = Math.max(...upCall.map(f => f.level));
+            const downCallFloor = Math.min(...downCall.map(f => f.level));
 
             console.log(upCallFloor, downCallFloor)
             return upCall >= downCall ? upCallFloor : downCallFloor;
 
         };
-        const nearPlan = (currentFloor) => {
+        const nearPlan = function (currentFloor) {
             const searchRange = parseInt(floors.length / elevators.length / 2);
             return _plan(currentFloor, searchRange);
         };
-        const farPlan = (currentFloor) => {
+        const farPlan = function (currentFloor) {
             const searchRange = floors.length;
             return _plan(currentFloor, searchRange);
         };
-        const isNeededStopFloor = (elevatorId, floorNum, direction) => {
+        const isNeededStopFloor = function (elevatorId, floorNum, direction) {
             return true;
         };
 
@@ -80,16 +80,18 @@
             e.on("idle", () => {
                 // console.log("idle", e);
 
+                console.log(planner)
+
                 const currFloor = e.currentFloor();
 
                 let planFloor = nearPlan(currFloor);
                 console.log("near", planFloor);
-                if (planFloor === NaN) {
+                if (planFloor === undefined) {
                     planFloor = farPlan(currFloor);
                     console.log("far", planFloor);
-                    if (planFloor === NaN) {
+                    if (planFloor === undefined) {
                         // 適切な計画がなければ標準位置へ移動
-                        planFloor = stayPlan(e.id);
+                        planFloor = planner.stayPlan(e.id);
                         console.log("stay", planFloor);
                     }
                 }
