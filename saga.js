@@ -1,43 +1,23 @@
 {
     init: (elevators, floors) => {
 
-        const call = [];
-        [...Array(floors.length).keys()].map((floorNum) => {
-            const up_v = { floor: floorNum, direction: "up", called: false, reserve: undefined };
-            const down_v = { floor: floorNum, direction: "down", called: false, reserve: undefined };
-            const floorSet = { up: up_v, down: down_v }
-            call.push(floorSet);
-        });
+        const stat = () => {
 
-
-        //--
-        const position = [];
-        [...Array(elevator.length).keys()].map((index) => {
-            const down_v = { elevatorId: index, direction: "down", called: false, reserve: undefined };
-            const floorSet = { up: up_v, down: down_v }
-            position.push(floorSet);
-        });
-        const getFloorPriority = (targetFloorNum) => {
-            const f = floors[targetFloorNum];
-            console.log(targetFloorNum, f.waiting("up"), f.waiting("down"))
-            if (f.waiting("up") || f.waiting("down")) {
-                const priority = Math.abs(e.currentFloor() - targetFloorNum);
-                return priority;
-            } else {
-                return Infinity;
-            }
+            this.adfa = aaa
         };
 
         elevators.map((e, i) => {
 
             e.id = i;
             e.plannedDirection = undefined;
-            e.stopFloorRequestedFromPassenger = new Set();
 
-            e.stopFloorPlanning = (direction, requestFloors) => {
-                if
-
-            }
+            e.getNextFloorDirection = () => {
+                if (e.destinationQueue.length === 0) {
+                    return "none";
+                }
+                const nextFloorNum = e.destinationQueue[0];
+                return nextFloorNum >= e.currentFloor() ? "up" : "down";
+            };
 
             e.setIndicator = (direction) => {
                 if (direction === "up") {
@@ -70,17 +50,6 @@
                 // 適切な計画がなければ標準位置へ移動
 
                 {
-                    // waiting search. both direction.
-                    const floorNums = [...Array(floors.length).keys()];
-                    const priorities = floorNums.map(getFloorPriority);
-                    const highPriorityValue = Math.min(...priorities);
-                    const highPriorityFloorNum = priorities.findIndex(v => v === highPriorityValue);
-                    console.log(priorities, highPriorityValue, highPriorityFloorNum);
-                    if (highPriorityFloorNum !== -1) {
-                        goingFloorNum = highPriorityFloorNum
-                    }
-                    {
-                    }
 
                     if (e.currentFloor() > goingFloorNum) {
                         e.goingUpIndicator(false);
@@ -100,49 +69,41 @@
                 // 合致する方向の要求があるか
                 // 重量に空きがあるか
                 // よい場合は停止要求のキューの最初に追加
+                if (floorNum === e.destinationQueue[0]) { return; }
+                if (false === floors[floorNum][direction].called) { return; }
+                if (false === e.checkAvailability()) { return; }
 
-                if (false === stat[floorNum][direction]["called"]) {
-                    return;
-                }
-
-                if (false === e.checkAvailability()) {
-                    return;
-                }
-
-
-
-                const queue = e.destinationQueue;
-                queue.unshift(floorNum);
-                e.destinationQueue = queue;
+                e.destinationQueue.unshift(floorNum);
                 e.checkDestinationQueue();
 
             });
             e.on("stopped_at_floor", (floorNum) => {
+
+                const direction = e.getNextFloorDirection();
+                if (direction === "none") { return };
+
                 // 次の階次第で進行方向表示を更新
+                e.setIndicator(direction);
 
                 // フロアの進行方向の要求をクリア
+                floors[floorNum].clear(direction);
 
-                // 次の階へ向かう
-
-                if (e.getPressedFloors().length <= 0) {
-                    if (floors[floorNum].waiting("up")) {
-                        e.goingUpIndicator(true);
-                        e.goingDownIndicator(false);
-                    } else {
-                        e.goingUpIndicator(false);
-                        e.goingDownIndicator(true);
-                    }
-                }
             });
-            e.on("floor_button_pressed", (floorRequestNum) => {
+            e.on("floor_button_pressed", (floorNum) => {
 
                 // 押されたボタン＋周囲の状況から、再計画、キュー入れ込む
+                const pressedFloors = e.getPressedFloors();
+                
+                const lowerFloors = pressedFloors.filter(fN => e.currentFloor() > fN);
+                const higherFloors = pressedFloors.filter(fN => e.currentFloor() < fN);
 
-                const s = new Set(e.getPressedFloors());
-                const sorted = [...s].sort();
+                if (lowerFloors.length <= higherFloors){
+                    const sortedPressedFloors = [...pressedFloors].sort();
+                }else{
+                    const sortedPressedFloors = [...pressedFloors].sort().reverse();
+                }
 
-                console.log("pressd", i, sorted);
-                e.destinationQueue = sorted;
+                e.destinationQueue = sortedPressedFloors;
                 e.checkDestinationQueue();
             });
         })
@@ -159,10 +120,10 @@
             };
 
             f.on("up_button_pressed", () => {
-                call[f.id]["up"].called = true;
+                f["up"].called = true;
             });
             f.on("down_button_pressed", () => {
-                call[f.id]["down"].called = true;
+                f["down"].called = true;
             });
 
         })
