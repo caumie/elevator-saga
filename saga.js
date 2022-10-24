@@ -11,7 +11,6 @@
                 const searchMinFloor = Math.max(0, currentFloor - searchRange);
                 const searchMaxFloor = Math.min(currentFloor + searchRange, floors.length);
 
-
                 const upCall = floors
                     .map(f => ({ level: f.level, call: Boolean(f.buttonStates["up"]) }))
                     .slice(searchMinFloor, searchMaxFloor)
@@ -56,7 +55,7 @@
                     .filter(e => e.nextFloor === floorNum)
                     .filter(e => e.direction === direction)
                 console.log(ll);
-                return ll.length !== 0;
+                return ll.length === 0;
             },
         };
 
@@ -100,18 +99,19 @@
             };
 
             e.on("idle", () => {
-                // console.log("idle", e);
+                let msg = `idle : No.${e.id} -> wait ${e.currentFloor()}`;
 
                 const currFloor = e.currentFloor();
 
                 {
                     // near
-                    const plan = planner.nearPlan(currFloor);
+                    const plan = planner.nearPlan(planner.stayFloor(e.id));
                     if (plan.direction) {
                         const highPriorityFloor = plan.floors[0];
                         e.directMoveFloor = highPriorityFloor; // !
                         e.setIndicator(plan.direction);
                         e.goToFloor(highPriorityFloor);
+                        console.log(`${msg} -> goto ${highPriorityFloor} (direct)`);
                         return;
                     }
                 }
@@ -126,14 +126,16 @@
                         [0].level;
                         e.setIndicator(plan.direction);
                         e.goToFloor(highPriorityFloor);
+                        console.log(`${msg} -> goto ${highPriorityFloor}`);
                         return;
                     }
                 }
 
                 // stay
-                stayFloor = planner.stayFloor(e.id);
+                const stayFloor = planner.stayFloor(e.id);
                 e.setIndicator(e.getNextFloorDirection(stayFloor));
                 e.goToFloor(stayFloor);
+                console.log(`${msg} -> goto ${stayFloor} (stay)`);
 
             });
             e.on("passing_floor", (floorNum, direction) => {
@@ -175,6 +177,19 @@
                     return;
                 };
 
+                if (e.getPressedFloors().length === 0) {
+                    const upStatus = floors[floorNum].buttonStates["up"];
+                    if (upStatus) {
+                        e.setIndicator("up")
+                        return;
+                    }
+                    const downStatus = floors[floorNum].buttonStates["down"];
+                    if (downStatus) {
+                        e.setIndicator("down")
+                        return;
+                    }
+                    return;
+                }
             });
             e.on("floor_button_pressed", (floorNum) => {
                 // console.log("press", e, floorNum);
