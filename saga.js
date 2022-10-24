@@ -11,7 +11,6 @@
                 const searchMinFloor = Math.max(0, currentFloor - searchRange);
                 const searchMaxFloor = Math.min(currentFloor + searchRange, floors.length);
 
-                console.log(searchMinFloor, searchMaxFloor)
 
                 const upCall = floors
                     .map(f => ({ level: f.level, call: Boolean(f.buttonStates["up"]) }))
@@ -22,7 +21,6 @@
                     .slice(searchMinFloor, searchMaxFloor)
                     .filter(f => f.call);
 
-                console.log(upCall, downCall)
                 if (upCall.length === 0 && downCall.length === 0) {
                     return { direction: undefined, floors: [] };
                 }
@@ -35,7 +33,8 @@
 
             },
             nearPlan: function (currentFloor) {
-                const searchRange = parseInt(floors.length / elevators.length / 2);
+                // const searchRange = parseInt(floors.length / elevators.length / 2);
+                const searchRange = 2;
                 return this.plan(currentFloor, searchRange);
             },
             farPlan: function (currentFloor) {
@@ -43,9 +42,25 @@
                 return this.plan(currentFloor, searchRange);
             },
             isNeededStopFloor: function (elevatorId, floorNum, direction) {
-                return true;
+                const l = elevators.reduce((arr, e) => {
+                    arr.push({
+                        id: e.id,
+                        nextFloor: e.destinationQueue[0],
+                        direction: e.getNextFloorDirection(e.destinationQueue[0])
+                    });
+                    return arr;
+                }, []);
+                console.log(l);
+                const ll = l
+                    .filter(e => e.id !== elevatorId)
+                    .filter(e => e.nextFloor === floorNum)
+                    .filter(e => e.direction === direction)
+                console.log(ll);
+                return ll.length !== 0;
             },
         };
+
+
 
         elevators.map((e, i) => {
 
@@ -97,7 +112,6 @@
                         e.directMoveFloor = highPriorityFloor; // !
                         e.setIndicator(plan.direction);
                         e.goToFloor(highPriorityFloor);
-                        console.log("near", plan);
                         return;
                     }
                 }
@@ -112,7 +126,6 @@
                         [0].level;
                         e.setIndicator(plan.direction);
                         e.goToFloor(highPriorityFloor);
-                        console.log("far", plan);
                         return;
                     }
                 }
@@ -121,7 +134,6 @@
                 stayFloor = planner.stayFloor(e.id);
                 e.setIndicator(e.getNextFloorDirection(stayFloor));
                 e.goToFloor(stayFloor);
-                console.log("stay", stayFloor);
 
             });
             e.on("passing_floor", (floorNum, direction) => {
@@ -137,6 +149,7 @@
 
                 if ("" === floors[floorNum].buttonStates[direction]) { return; };
                 if (false === e.checkAvailability()) { return; };
+                if (false === planner.isNeededStopFloor(e.id, floorNum, direction)) { return; }
 
                 if (floorNum !== e.destinationQueue[0]) {
                     e.destinationQueue.unshift(floorNum);
