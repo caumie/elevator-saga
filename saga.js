@@ -2,7 +2,7 @@
     init: (elevators, floors) => {
 
         const planner = {
-            stayPlan: function (elevatorId) {
+            stayFloor: function (elevatorId) {
                 const per = floors.length / elevators.length;
                 const stayFloorNum = Math.ceil(elevatorId * per);
                 return stayFloorNum;
@@ -10,6 +10,8 @@
             plan: function (currentFloor, searchRange) {
                 const searchMinFloor = Math.max(0, currentFloor - searchRange);
                 const searchMaxFloor = Math.min(currentFloor + searchRange, floors.length);
+
+                console.log(searchMinFloor, searchMaxFloor)
 
                 const upCall = floors
                     .map(f => ({ level: f.level, call: Boolean(f.buttonStates["up"]) }))
@@ -28,7 +30,7 @@
                 if (upCall.length >= downCall.length) {
                     return { direction: "up", floors: [...upCall.map(f => f.level)] }
                 } else {
-                    return { direction: "down", floors: [...downCall.map(f => f.level)] }
+                    return { direction: "down", floors: [...downCall.map(f => f.level).reverse()] }
                 }
 
             },
@@ -48,6 +50,7 @@
         elevators.map((e, i) => {
 
             e.id = i;
+            e.directMoveFloor = undefined;
 
             e.getNextFloorDirection = (nextFloorNum) => {
                 return nextFloorNum >= e.currentFloor() ? "up" : "down";
@@ -84,30 +87,53 @@
             e.on("idle", () => {
                 // console.log("idle", e);
 
-                console.log(planner)
-
                 const currFloor = e.currentFloor();
 
-                let planFloor = planner.nearPlan(currFloor);
-                console.log("near", planFloor);
-                if (planFloor === undefined) {
-                    planFloor = planner.farPlan(currFloor);
-                    console.log("far", planFloor);
-                    if (planFloor === undefined) {
-                        // 適切な計画がなければ標準位置へ移動
-                        planFloor = planner.stayPlan(e.id);
-                        console.log("stay", planFloor);
+                {
+                    // near
+                    const plan = planner.nearPlan(currFloor);
+                    if (plan.direction) {
+                        const highPriorityFloor = plan.floors[0];
+                        e.directMoveFloor = highPriorityFloor; // !
+                        e.setIndicator(plan.direction);
+                        e.goToFloor(highPriorityFloor);
+                        console.log("near", plan);
+                        return;
                     }
                 }
-                console.log(planFloor);
-                e.setIndicator(e.getNextFloorDirection(planFloor));
-                e.goToFloor(planFloor);
+
+                {
+                    // far (direction only)
+                    const plan = planner.farPlan(currFloor);
+                    if (plan.direction) {
+                        const highPriorityFloor = plan.floors
+                            .map((f) => { return { priority: Math.abs(currFloor - f), level: f } })
+                            .sort((a, b) => { a.priority - b.priority })
+                        [0].level;
+                        e.setIndicator(plan.direction);
+                        e.goToFloor(highPriorityFloor);
+                        console.log("far", plan);
+                        return;
+                    }
+                }
+
+                // stay
+                stayFloor = planner.stayFloor(e.id);
+                e.setIndicator(e.getNextFloorDirection(stayFloor));
+                e.goToFloor(stayFloor);
+                console.log("stay", stayFloor);
 
             });
             e.on("passing_floor", (floorNum, direction) => {
-                // console.log("pass", e)
+                // console.log("pass", e, floorNum, direction)
 
                 e.setIndicator(direction);
+
+                if (e.directMoveFloor) {
+                    if (e.directMoveFloor !== floorNum) {
+                        return;
+                    }
+                }
 
                 if ("" === floors[floorNum].buttonStates[direction]) { return; };
                 if (false === e.checkAvailability()) { return; };
@@ -119,7 +145,13 @@
 
             });
             e.on("stopped_at_floor", (floorNum) => {
-                // console.log("stopped", e);
+                // console.log("stopped", e, floorNum);
+
+                if (e.directMoveFloor) {
+                    if (e.directMoveFloor === floorNum) {
+                        e.directMoveFloor = undefined;
+                    }
+                }
 
                 if (floorNum === 0) {
                     e.setIndicator("up");
@@ -130,23 +162,9 @@
                     return;
                 };
 
-                if (e.getPressedFloors().length === 0) {
-                    const upStatus = floors[floorNum].buttonStates["up"];
-                    if (upStatus) {
-                        e.setIndicator("up")
-                        return;
-                    }
-                    const downStatus = floors[floorNum].buttonStates["down"];
-                    if (downStatus) {
-                        e.setIndicator("down")
-                        return;
-                    }
-                    return;
-                }
-
             });
             e.on("floor_button_pressed", (floorNum) => {
-                // console.log("press", e);
+                // console.log("press", e, floorNum);
 
                 const pressedFloors = e.getPressedFloors();
 
@@ -164,8 +182,12 @@
         })
 
         floors.map((f) => {
-            f.on("up_button_pressed", () => { });
-            f.on("down_button_pressed", () => { });
+            f.on("up_button_pressed", () => {
+                // console.log(`Floor :${f.level} , ${f.buttonStates}`);
+            });
+            f.on("down_button_pressed", () => {
+                // console.log(`Floor :${f.level} , ${f.buttonStates}`);
+            });
         })
     },
         update: (dt, elevators, floors) => {
