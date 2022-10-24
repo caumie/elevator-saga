@@ -1,7 +1,7 @@
 {
     init: (elevators, floors) => {
 
-        const planner = new Object({
+        const planner = {
             stayPlan: function (elevatorId) {
                 const per = floors.length / elevators.length;
                 const stayFloorNum = Math.ceil(elevatorId * per);
@@ -12,21 +12,24 @@
                 const searchMaxFloor = Math.min(currentFloor + searchRange, floors.length);
 
                 const upCall = floors
-                    .slice(currentFloor, searchMaxFloor)
-                    .filter(e => e.buttonStates["up"])
+                    .map(f => ({ level: f.level, call: Boolean(f.buttonStates["up"]) }))
+                    .slice(searchMinFloor, searchMaxFloor)
+                    .filter(f => f.call);
                 const downCall = floors
-                    .slice(searchMinFloor, currentFloor)
-                    .filter(e => e.buttonStates["down"])
+                    .map(f => ({ level: f.level, call: Boolean(f.buttonStates["down"]) }))
+                    .slice(searchMinFloor, searchMaxFloor)
+                    .filter(f => f.call);
 
                 console.log(upCall, downCall)
                 if (upCall.length === 0 && downCall.length === 0) {
-                    return undefined;
+                    return { direction: undefined, floors: [] };
                 }
-                const upCallFloor = Math.max(...upCall.map(f => f.level));
-                const downCallFloor = Math.min(...downCall.map(f => f.level));
 
-                console.log(upCallFloor, downCallFloor)
-                return upCall >= downCall ? upCallFloor : downCallFloor;
+                if (upCall.length >= downCall.length) {
+                    return { direction: "up", floors: [...upCall.map(f => f.level)] }
+                } else {
+                    return { direction: "down", floors: [...downCall.map(f => f.level)] }
+                }
 
             },
             nearPlan: function (currentFloor) {
@@ -40,7 +43,7 @@
             isNeededStopFloor: function (elevatorId, floorNum, direction) {
                 return true;
             },
-        });
+        };
 
         elevators.map((e, i) => {
 
