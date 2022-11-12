@@ -1,5 +1,5 @@
 {
-    init: (elevators, floors) => {
+    init: ((elevators, floors) => {
 
         const planner = {
             stayFloor: function (elevatorId) {
@@ -217,8 +217,8 @@
                 // console.log(`Floor :${f.level} , ${f.buttonStates}`);
             });
         })
-    },
-        update: (dt, elevators, floors) => {
-            // console.log(dt, elevators, floors);
-        }
+    }),
+        update: ((dt, elevators, floors) => {
+            console.log(dt, elevators, floors);
+        })
 }
