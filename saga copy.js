@@ -1,9 +1,15 @@
 {
     init: ((elevators, floors) => {
 
-        elevators.map((e, i) => {
+        elevators.map((e, elevatorIndex) => {
 
-            e.id = i;
+            e.nextFloorDirection = () => {
+                if(e.destinationQueue.length === 0);
+                
+
+                e.currentFloor();
+                e.destinationQueue[0]
+            };
 
             e.setIndicator = (direction) => {
                 if (direction === "up") {
@@ -24,13 +30,23 @@
             };
 
             e.on("idle", () => {
-                const msg = `idle : No.${e.id} -> wait ${e.currentFloor()}`;
+                const msg = `idle : No.${elevatorIndex} -> wait ${e.currentFloor()}`;
             });
             e.on("passing_floor", (floorNum, direction) => {
+                if (e.destinationQueue.findIndex(v => v === floorNum)) {
+                    return;
+                }
+                if (plannner.isNeedStopFloor(elevatorIndex, floorNum, direction)) {
+                    e.destinationQueue.unshift(floorNum);
+                    e.checkDestinationQueue();
+                };
             });
             e.on("stopped_at_floor", (floorNum) => {
+                e.destinationQueue = plannner.planning(elevatorIndex, remainingPlans);
+                e.checkDestinationQueue();
             });
             e.on("floor_button_pressed", (floorNum) => {
+                e.goToFloor(floorNum);
             });
         })
 
